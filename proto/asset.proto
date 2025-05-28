@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "distbuild/boong/proxy/proto";
+
+package asset;
+
+// Asset service
+service AssetService {
+  rpc SendAsset(stream AssetRequest) returns (stream AssetReply);
+}
+
+// Asset request
+message AssetRequest {
+}
+
+// Asset reply
+message AssetReply {
+}

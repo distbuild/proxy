@@ -1,0 +1,21 @@
+# Define the compiler and compiler flags
+cxx = g++
+cxxflags = -Wall -std=c++11
+
+# Define the build rules
+rule compile
+  command = $cxx $cxxflags -c $in -o $out
+  description = Compiling $in
+
+rule link
+  command = $cxx $in -o $out
+  description = Linking $out
+
+# Build the object files
+build test/result/main.o: compile test/cpp/main.cpp
+
+# Link the object files into the final executables
+build test/result/main: link test/result/main.o
+
+# Define the default targets
+default test/result/main

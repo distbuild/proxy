@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "distbuild/boong/proxy/proto";
+
+package log;
+
+// Log service
+service LogService {
+  rpc SendLog(stream LogRequest) returns (stream LogReply);
+}
+
+// Log request
+message LogRequest {
+}
+
+// Log reply
+message LogReply {
+}

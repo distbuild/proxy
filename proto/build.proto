@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option go_package = "distbuild/boong/proxy/proto";
+
+package build;
+
+// Build service
+service BuildService {
+  rpc SendBuild(stream BuildRequest) returns (stream BuildReply);
+}
+
+// Build request
+message BuildRequest {
+  string buildLang = 1;               // Build language
+  repeated BuildFile buildFiles = 2;  // Build files
+  string buildRule = 3;               // Build rule
+  string buildPath = 4;               // Build path
+  repeated string buildTargets = 5;   // Build targets
+  string buildID = 6;                 // Build ID
+}
+
+// Build file
+message BuildFile {
+  string filePath = 1;  // File path
+  bytes fileData = 2;   // File data
+  string checkSum = 3;  // File checksum
+}
+
+// Build reply
+message BuildReply {
+  repeated BuildTarget buildTargets = 1;  // Build targets
+  bool buildStatus = 2;                   // Build status
+  string buildID = 3;                     // Build ID
+}
+
+// Build target
+message BuildTarget {
+    string targetPath = 1;  // Target path
+    bytes targetData = 2;   // Target data
+    string checksum = 3;    // Target checksum
+}
