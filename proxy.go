@@ -4,16 +4,13 @@ import (
 	"bufio"
 	"context"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"time"
 
@@ -22,6 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"distbuild/boong/proxy/consul"
 	"distbuild/boong/proxy/proto"
 	"distbuild/boong/proxy/task"
 	"distbuild/boong/utils"
@@ -97,93 +95,8 @@ func main() {
 	}
 }
 
-func containsAny(listB, listA []string) bool {
-	for _, a := range listA {
-		if slices.Contains(listB, a) {
-			return true
-		}
-	}
-	return false
-}
-
 func isValidIP(ip string) bool {
 	return net.ParseIP(ip) != nil
-}
-
-func getListenAddresses(consulService, serviceName string) ([]string, error) {
-	url := fmt.Sprintf("http://%s:8500/v1/catalog/service/%s", consulService, serviceName)
-	client := &http.Client{Timeout: 20 * time.Second}
-
-	resp, err := client.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("invalid response status code: %d", resp.StatusCode)
-	}
-
-	var services []ConsulService
-	if err = json.Unmarshal(body, &services); err != nil {
-		return nil, err
-	}
-
-	var addresses []string
-	for _, service := range services {
-		if !isValidIP(service.Address) {
-			continue
-		}
-		addresses = append(addresses, fmt.Sprintf("%s:%d", service.Address, 39090))
-	}
-
-	return addresses, nil
-}
-
-func getNormalConsulServices(consulService string) ([]string, error) {
-	url := fmt.Sprintf("http://%s:8500/v1/health/state/passing", consulService)
-	client := &http.Client{Timeout: 20 * time.Second}
-
-	resp, err := client.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("invalid response status code: %d", resp.StatusCode)
-	}
-
-	var services []NormalService
-	err = json.Unmarshal(body, &services)
-	if err != nil {
-		return nil, err
-	}
-
-	var normalServices []string
-	for _, service := range services {
-		if len(service.Name) > 0 {
-			normalServices = append(normalServices, service.Name)
-		}
-	}
-
-	return normalServices, nil
 }
 
 func validArgs(_ context.Context, consulService string) error {
@@ -191,19 +104,9 @@ func validArgs(_ context.Context, consulService string) error {
 		return errors.New("invalid Ip format\n")
 	}
 
-	normalServices, err := getNormalConsulServices(consulService)
+	listenAddresses, err := consul.GetListenAddresses(consulService)
 	if err != nil {
-		return errors.New("failed to get normal consul services!\n")
-	}
-
-	for _, service := range normalServices {
-		addresses, err := getListenAddresses(consulService, service)
-		if err != nil {
-			return errors.New("failed to get listen addresses from consul!\n")
-		}
-		if !containsAny(listenAddresses, addresses) {
-			listenAddresses = append(listenAddresses, addresses...)
-		}
+		return errors.New("failed to get worker listen address")
 	}
 
 	if len(listenAddresses) == 0 {
