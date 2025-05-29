@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 )
 
@@ -221,6 +222,16 @@ func appendPathToInputFiles(dir string, inputFiles []string, includePath []strin
 	return inputFiles, nil
 }
 
+func parseCommand(command, compiletype string) string {
+	if compiletype == "clang" || compiletype == "clang++" {
+		clangPattern := regexp.MustCompile(`prebuilts/clang/host/linux-x86/clang-[a-zA-Z0-9]+/bin/(clang|clang\+\+)`)
+		return clangPattern.ReplaceAllStringFunc(command, func(match string) string {
+			return clangPattern.FindStringSubmatch(match)[1]
+		})
+	}
+	return command
+}
+
 func CompileDependency(path string, filename string) ([]BuildInfo, error) {
 	var tasks []BuildInfo
 
@@ -249,7 +260,7 @@ func CompileDependency(path string, filename string) ([]BuildInfo, error) {
 		var task BuildInfo
 
 		// command
-		task.BuildRule = command.Command
+		task.BuildRule = parseCommand(command.Command, command.CompilerType)
 
 		// targets
 		if command.OutputFile != "" {
