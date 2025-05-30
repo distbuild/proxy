@@ -100,11 +100,13 @@ func isValidIP(ip string) bool {
 }
 
 func validArgs(_ context.Context, consulService string) error {
+	var err error
+
 	if !isValidIP(consulService) {
 		return errors.New("invalid Ip format\n")
 	}
 
-	listenAddresses, err := consul.GetListenAddresses(consulService)
+	listenAddresses, err = consul.GetListenAddresses(consulService)
 	if err != nil {
 		return errors.New("failed to get worker listen address")
 	}
