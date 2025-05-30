@@ -158,17 +158,23 @@ func run(ctx context.Context) error {
 
 	var clients []proto.BuildServiceClient
 	var conns []*grpc.ClientConn
+	var errs []error
 
 	for _, addr := range listenAddresses {
 		conn, err := grpc.NewClient(addr, options...)
 		if err != nil {
-			for _, c := range conns {
-				_ = c.Close()
-			}
-			return errors.Wrap(err, "failed to create grpc client for address: "+addr)
+			errs = append(errs, errors.Wrap(err, "failed to create grpc client for address: "+addr))
+			continue
 		}
 		conns = append(conns, conn)
 		clients = append(clients, proto.NewBuildServiceClient(conn))
+	}
+
+	if len(clients) == 0 {
+		for _, err := range errs {
+			fmt.Println(err)
+		}
+		return errors.New("failed to connect to any address")
 	}
 
 	defer func() {

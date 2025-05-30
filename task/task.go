@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 )
 
 type Command struct {
@@ -223,6 +224,7 @@ func appendPathToInputFiles(dir string, inputFiles []string, includePath []strin
 }
 
 func parseCommand(command, compiletype string) string {
+	command = strings.Replace(command, "PWD=/proc/self/cwd ", "", 1)
 	if compiletype == "clang" || compiletype == "clang++" {
 		clangPattern := regexp.MustCompile(`prebuilts/clang/host/linux-x86/clang-[a-zA-Z0-9]+/bin/(clang|clang\+\+)`)
 		return clangPattern.ReplaceAllStringFunc(command, func(match string) string {
